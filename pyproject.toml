@@ -25,6 +25,7 @@ dependencies = [
 
     # Data
     "ucimlrepo>=0.0.3",
+    "meteostat>=2.0.0",
 ]
 
 [project.optional-dependencies]
