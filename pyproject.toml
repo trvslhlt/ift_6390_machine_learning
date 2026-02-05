@@ -44,3 +44,4 @@ packages = ["src/ift6390"]
 [tool.pyright]
 typeCheckingMode = "basic"
 reportArgumentType = false
+reportAttributeAccessIssue = false
