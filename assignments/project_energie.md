@@ -2,6 +2,49 @@
 
 ## Notes
 
+### Baseline: no custom features
+
+```txt
+OLS (baseline):
+  R² train: 0.4161
+  R² test:  -0.1887
+  RMSE test: 77.1386
+
+Ridge avec scaling (λ=100.0):
+  R² train: 0.4159
+  R² test:  -0.1825
+  RMSE test: 76.9382
+
+Comparaison des coefficients (triés par réduction):
+       Caractéristique        OLS      Ridge  Réduction (%)
+          is_peak_hour  21.231722  10.416325   5.093980e+01
+              mois_sin  19.079766  13.144773   3.110622e+01
+      jour_semaine_cos  -1.660517  -1.161708   3.003936e+01
+             heure_cos -45.300469 -31.739168   2.993634e+01
+             heure_sin -37.446491 -26.792259   2.845188e+01
+      jour_semaine_sin  -0.296764  -0.212370   2.843785e+01
+              mois_cos   5.687246   4.836384   1.496088e+01
+          vitesse_vent  -0.641622  -0.915100  -4.262294e+01
+       poste_c_cooling   1.153395   3.083910  -1.673768e+02
+       poste_a_heating   1.732259   8.128558  -3.692462e+02
+       poste_b_heating  -1.922117 -12.548746  -5.528608e+02
+       poste_c_heating   4.219950  38.632671  -8.154770e+02
+          temp_heating   4.030092  37.193649  -8.228982e+02
+       temperature_ext   6.712729  69.355874  -9.331994e+02
+      temp_rolling_24h  -3.690085 -43.502033  -1.078890e+03
+              humidite   0.320823   5.706802  -1.678798e+03
+        conns_trend_1h  -0.119000  -2.932391  -2.364191e+03
+          conns_lag_1h   1.164783  34.534251  -2.864865e+03
+     clients_connectes   1.045783  32.432631  -3.001277e+03
+             poste_enc   0.139873   9.382602  -6.607959e+03
+irradiance_rolling_24h   0.021709   2.333023  -1.064672e+04
+       temp_heating_sq  -0.004578   0.781625  -1.697204e+04
+    irradiance_solaire  -0.092834 -20.695154  -2.219265e+04
+     conn_heating_load   0.002537  62.073264  -2.446154e+06
+```
+
+## Code Snippets
+
 Ranking features by coefficient weights
 
 ```python
