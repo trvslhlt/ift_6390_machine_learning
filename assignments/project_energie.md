@@ -314,3 +314,50 @@ for idx, feature in enumerate(numeric_features):
 
 plt.tight_layout()
 ```
+
+Visualize residuals
+```python
+import math
+
+RES_VIS_T = 5000
+# RES_ERROR_T = 100
+
+# make preditions on trining data
+y_train_pred_final = model_final.predict(X_train_final)
+
+# find the N data points with the largest absolute residuals
+train_residuals = y_train_final - y_train_pred_final
+train_residuals_abs = np.abs(train_residuals)
+
+# add residuals to the dataframe
+analysis_df = train_eng.copy()
+analysis_df.insert(loc=0, column='residual', value=train_residuals)
+analysis_df.insert(loc=1, column='residual_abs', value=train_residuals_abs)
+analysis_df = analysis_df[analysis_df['residual'].abs() < RES_VIS_T]
+
+# sort by largest residual
+analysis_df = analysis_df.sort_values(by='residual_abs', ascending=False)
+
+# plot features aginst energy and residual
+numeric_features = analysis_df.select_dtypes(include='number').columns.to_list()
+non_numeric_features = []
+features = numeric_features + non_numeric_features
+residual_feature = 'residual'
+plt_column_n = 3
+plt_row_n = math.ceil(len(features) / plt_column_n)
+fig, axes = plt.subplots(plt_row_n, plt_column_n, figsize=(12, 50))
+
+for idx, feature in enumerate(numeric_features):
+    r = idx // plt_column_n
+    c = idx % plt_column_n
+    ax = axes[r, c]
+    ax.scatter(analysis_df[feature], analysis_df[CustomFeatures.energy_capped], alpha=0.3, s=5)
+    ax2 = ax.twinx() 
+    ax2.scatter(analysis_df[feature], analysis_df[residual_feature], alpha=0.3, s=5, color='red')
+    ax2.axhline(0, color='darkred', linestyle='-', linewidth=1)
+    
+    
+    ax.set_title(feature)
+
+plt.tight_layout()
+```
