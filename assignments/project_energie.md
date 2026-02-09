@@ -404,3 +404,190 @@ for idx, feature in enumerate(numeric_features):
 
 plt.tight_layout()
 ```
+
+Error Analysis (Part 7: Option C)
+
+```python
+# Option C: In-depth Error Analysis
+# Goal: Identify when the model makes the most errors and propose improvements
+
+print("=" * 60)
+print("OPTION C: IN-DEPTH ERROR ANALYSIS")
+print("=" * 60)
+
+# 1. Calculate residuals on test data
+residuals = y_test_final - y_pred_final
+residuals_abs = np.abs(residuals)
+
+# Add residuals to test dataframe for analysis
+error_analysis = test_eng.copy()
+error_analysis['residual'] = residuals
+error_analysis['residual_abs'] = residuals_abs
+error_analysis['y_pred'] = y_pred_final
+
+# 2. Basic error statistics
+print("\n📊 ERROR STATISTICS")
+print("-" * 40)
+print(f"RMSE: {np.sqrt(np.mean(residuals**2)):.2f} kWh")
+print(f"MAE:  {np.mean(residuals_abs):.2f} kWh")
+print(f"Median error: {np.median(residuals_abs):.2f} kWh")
+print(f"Max under-prediction: {residuals.min():.2f} kWh")
+print(f"Max over-prediction: {residuals.max():.2f} kWh")
+
+# 3. Identify high-error observations (top 10%)
+error_threshold = np.percentile(residuals_abs, 90)
+high_error = error_analysis[error_analysis['residual_abs'] > error_threshold]
+low_error = error_analysis[error_analysis['residual_abs'] <= error_threshold]
+
+print(f"\n🔍 HIGH-ERROR OBSERVATIONS (top 10%)")
+print("-" * 40)
+print(f"Error threshold (90th percentile): {error_threshold:.2f} kWh")
+print(f"Number of observations: {len(high_error)}")
+
+
+
+
+
+# 4. Analyze patterns in high-error observations
+print("\n📈 PATTERNS IN HIGH-ERROR PREDICTIONS")
+print("-" * 40)
+
+# Compare categorical distributions
+categorical_cols = ['poste', 'heure', 'mois', 'est_weekend', 'evenement_pointe']
+
+for col in categorical_cols:
+    high_dist = high_error[col].value_counts(normalize=True)
+    all_dist = error_analysis[col].value_counts(normalize=True)
+    
+    print(f"\n{col.upper()}:")
+    for val in high_dist.index[:5]:  # Top 5 values
+        high_pct = high_dist.get(val, 0) * 100
+        all_pct = all_dist.get(val, 0) * 100
+        diff = high_pct - all_pct
+        if abs(diff) > 5:  # Only show significant differences
+            arrow = "↑" if diff > 0 else "↓"
+            print(f"  {val}: {high_pct:.1f}% (vs {all_pct:.1f}% overall) {arrow}")
+
+
+
+# 5. Numeric feature comparison: high-error vs low-error
+print("\n📉 NUMERIC FEATURE COMPARISON")
+print("-" * 40)
+
+numeric_cols = ['temperature_ext', 'humidite', 'vitesse_vent', 'irradiance_solaire', 
+                'clients_connectes', 'energie_kwh', 'P_pointe']
+
+comparison_data = []
+for col in numeric_cols:
+    if col in error_analysis.columns:
+        high_mean = high_error[col].mean()
+        low_mean = low_error[col].mean()
+        diff_pct = 100 * (high_mean - low_mean) / (low_mean + 1e-8)
+        comparison_data.append({
+            'Feature': col,
+            'Mean (high error)': high_mean,
+            'Mean (low error)': low_mean,
+            'Difference (%)': diff_pct
+        })
+
+comparison_df = pd.DataFrame(comparison_data)
+comparison_df = comparison_df.sort_values('Difference (%)', key=lambda x: np.abs(x), ascending=False)
+print(comparison_df.to_string(index=False))
+
+
+# 6. Visualizations
+fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+
+# 6a. Error by hour
+hourly_error = error_analysis.groupby('heure')['residual_abs'].mean()
+axes[0, 0].bar(hourly_error.index, hourly_error.values, color='steelblue')
+axes[0, 0].set_xlabel('Hour')
+axes[0, 0].set_ylabel('Mean Absolute Error (kWh)')
+axes[0, 0].set_title('Error by Hour')
+axes[0, 0].axhline(residuals_abs.mean(), color='red', linestyle='--', label='Mean')
+axes[0, 0].legend()
+
+# 6b. Error by poste
+poste_error = error_analysis.groupby('poste')['residual_abs'].mean()
+axes[0, 1].bar(poste_error.index, poste_error.values, color='coral')
+axes[0, 1].set_xlabel('Poste')
+axes[0, 1].set_ylabel('Mean Absolute Error (kWh)')
+axes[0, 1].set_title('Error by Poste')
+
+# 6c. Error vs Temperature
+axes[0, 2].scatter(error_analysis['temperature_ext'], error_analysis['residual_abs'], 
+                   alpha=0.3, s=10)
+axes[0, 2].set_xlabel('Temperature (°C)')
+axes[0, 2].set_ylabel('Absolute Error (kWh)')
+axes[0, 2].set_title('Error vs Temperature')
+
+# 6d. Error vs Actual energy
+axes[1, 0].scatter(error_analysis['energie_kwh'], error_analysis['residual_abs'], 
+                   alpha=0.3, s=10)
+axes[1, 0].set_xlabel('Actual Energy (kWh)')
+axes[1, 0].set_ylabel('Absolute Error (kWh)')
+axes[1, 0].set_title('Error vs Actual Consumption')
+
+# 6e. Residual distribution by poste
+for poste in ['A', 'B', 'C']:
+    poste_residuals = error_analysis[error_analysis['poste'] == poste]['residual']
+    axes[1, 1].hist(poste_residuals, bins=30, alpha=0.5, label=f'Poste {poste}')
+axes[1, 1].set_xlabel('Residual (kWh)')
+axes[1, 1].set_ylabel('Frequency')
+axes[1, 1].set_title('Residual Distribution by Poste')
+axes[1, 1].legend()
+
+# 6f. Error by month
+monthly_error = error_analysis.groupby('mois')['residual_abs'].mean()
+axes[1, 2].bar(monthly_error.index, monthly_error.values, color='green')
+axes[1, 2].set_xlabel('Month')
+axes[1, 2].set_ylabel('Mean Absolute Error (kWh)')
+axes[1, 2].set_title('Error by Month')
+
+plt.tight_layout()
+
+
+# 7. Conclusions and improvement proposals
+print("\n" + "=" * 60)
+print("📋 CONCLUSIONS AND IMPROVEMENT PROPOSALS")
+print("=" * 60)
+
+# Calculate key insights
+poste_c_error = error_analysis[error_analysis['poste'] == 'C']['residual_abs'].mean()
+poste_a_error = error_analysis[error_analysis['poste'] == 'A']['residual_abs'].mean()
+peak_hour_error = error_analysis[error_analysis['is_peak_hour'] == 1]['residual_abs'].mean()
+off_peak_error = error_analysis[error_analysis['is_peak_hour'] == 0]['residual_abs'].mean()
+
+print("\n🔍 KEY OBSERVATIONS:")
+print(f"  1. Poste C has {poste_c_error/poste_a_error:.1f}x more error than Poste A")
+print(f"  2. Peak hour error: {peak_hour_error:.1f} kWh vs {off_peak_error:.1f} kWh (off-peak)")
+print(f"  3. High-consumption observations have the largest errors")
+
+print("\n💡 IMPROVEMENT PROPOSALS:")
+print("""
+  1. MODEL PER POSTE: Train a separate Ridge model for each poste
+     → The postes have very different behaviors
+     
+  2. NON-LINEAR FEATURES: Add polynomial terms
+     → The temperature-consumption relationship is not linear
+     
+  3. INTERACTIONS: Create poste × temperature features
+     → Each poste reacts differently to weather conditions
+     
+  4. TARGET TRANSFORMATION: Use log(energie_kwh)
+     → The distribution is skewed, log transform can help
+     
+  5. WIDER TEMPORAL WINDOWS: 24-hour or 7-day averages
+     → Capture seasonal trends
+""")
+
+# Justification for Option C
+print("\n" + "=" * 60)
+print("Option chosen: C - In-depth Error Analysis")
+print("Justification: This analysis allows understanding the model's")
+print("weaknesses and proposes concrete improvements based on data")
+print("rather than assumptions.")
+print("=" * 60)
+
+```
+
