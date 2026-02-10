@@ -591,3 +591,35 @@ print("=" * 60)
 
 ```
 
+Overfitting/underfitting
+
+```python
+# Learning curves to diagnose overfitting/underfitting
+from sklearn.model_selection import learning_curve
+
+# Use return_times=False for compatibility across sklearn versions
+train_sizes, train_scores, val_scores = learning_curve(
+    Ridge(alpha=model_ridge.alpha_),
+    X_train_scaled, y_train_reg,
+    cv=TimeSeriesSplit(n_splits=5),
+    train_sizes=np.linspace(0.1, 1.0, 10),
+    scoring='r2',
+    return_times=False
+)
+
+plt.figure(figsize=(10, 6))
+plt.plot(train_sizes, train_scores.mean(axis=1), 'o-', label='Train R²')
+plt.plot(train_sizes, val_scores.mean(axis=1), 'o-', label='Validation R²')
+plt.fill_between(train_sizes,
+                 train_scores.mean(axis=1) - train_scores.std(axis=1),
+                 train_scores.mean(axis=1) + train_scores.std(axis=1), alpha=0.1)
+plt.fill_between(train_sizes,
+                 val_scores.mean(axis=1) - val_scores.std(axis=1),
+                 val_scores.mean(axis=1) + val_scores.std(axis=1), alpha=0.1)
+plt.xlabel('Training Set Size')
+plt.ylabel('R² Score')
+plt.legend()
+plt.title('Learning Curves - Ridge Regression')
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+```
