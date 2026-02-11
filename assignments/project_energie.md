@@ -623,3 +623,143 @@ plt.title('Learning Curves - Ridge Regression')
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
 ```
+
+Late stage feature graveyard
+
+```python
+from enum import StrEnum, auto
+
+class EngFeature(StrEnum):
+    # energy
+    energy_lag = auto()
+    energy_rolling = auto()
+    # TODO try capping based on pct increase from previous
+
+    # energy proxies
+    # conns_lag_1h = auto()
+    conns_scaled = auto()
+    # conns_trend_1h = auto()
+    
+    # # temperature
+    # temp_rolling_avg = auto()
+    # temp_heating = auto()
+    temp_heating_pow = auto()
+    # temp_cooling = auto()
+    
+    # # time
+    # is_peak_hour = auto()
+
+    # # sunlight
+    # irradiance_rolling_24h = auto()
+    
+    # # "poste" encoding
+    # poste_a = auto()
+    # poste_b = auto()
+    poste_c = auto()
+    # poste_enc = auto()
+
+    # # interactions
+    # energy_per_conn_lag_1h = auto()
+    # conn_heating_load = auto()
+    # poste_a_heating = auto()
+    # poste_b_heating = auto()
+    # poste_c_heating = auto()
+    # poste_c_cooling = auto()
+    # temp_rolling_avg_poste = auto()
+    # TODO wind * heating
+    temp_heating_wind = auto()
+    # temp_rolling_avg_cos = auto()
+
+    @classmethod
+    def values(cls) -> list[str]:
+        return [member.value for member in cls]
+
+
+def create_custom_features(df: pd.DataFrame):
+    # # Poste-specific energy means (from training data, target encoding)
+    # poste_energy_means = {
+    #     'A': 82.727205,
+    #     'B': 129.809350,
+    #     'C': 259.096250,
+    # }
+    conns = df['clients_connectes']
+    # conns_lag_1h = conns.shift(1).bfill()
+    # conns_trend_1h = conns - conns_lag_1h
+    # conns_scaled = conns.max() / conns
+    conns_scaled = conns * (conns.max() / conns.rolling(window=168).max().bfill())  # 168 hours = 7 days
+    # conns_scaled = conns / (conns.max() / conns.rolling(window=168).max().bfill())  # 168 hours = 7 days
+
+    energy_per_conn = df['energie_kwh'] / conns_scaled
+    energy_lag = energy_per_conn.shift(1).bfill()
+    energy_rolling = energy_lag.rolling(window=6).mean().bfill()
+    # clip
+    energy_lag = energy_lag.clip(upper=energy_rolling * 2)  
+
+    # energy_per_conn_lag_1h = energy_lag / conns_lag_1h
+
+    temp = df['temperature_ext']
+    # irradiance = df['irradiance_solaire']
+
+    temp_rolling_avg = temp.rolling(window=24).mean().bfill()
+
+    # Heating degree-days (cold weather)
+    temp_heating = np.maximum(18 - temp, 0)
+    temp_heating_pow = temp_heating ** 2
+    temp_heating_wind = temp_heating * df['vitesse_vent']
+    
+    # Cooling degree-days (hot weather) - important for summer test data
+    # temp_cooling = np.maximum(temp - 22, 0)
+
+    # Irradiance features
+    # irradiance_rolling_24h = irradiance.rolling(window=24).mean().bfill()
+
+    # Target encoding for poste
+    # poste_enc = df['poste'].map(poste_energy_means)
+    poste_one_hot = pd.get_dummies(df['poste'], prefix='poste')
+    # poste_a = poste_one_hot['poste_A']
+    # poste_b = poste_one_hot['poste_B']
+    poste_c = poste_one_hot['poste_C']
+
+    # Poste × heating interactions (cold weather)
+    # poste_a_heating = np.where(df['poste'] == 'A', temp_heating, 0)
+    # poste_b_heating = np.where(df['poste'] == 'B', temp_heating, 0)
+    # poste_c_heating = np.where(df['poste'] == 'C', temp_heating, 0)
+    
+    # Poste × cooling interactions (hot weather - for summer test data)
+    # poste_c_cooling = np.where(df['poste'] == 'C', temp_cooling, 0)
+
+    # Peak hour features
+    # is_peak_hour_cond = ((df['heure'] >= 6) & (df['heure'] <= 9)) | ((df['heure'] >= 16) & (df['heure'] <= 20))
+    # is_peak_hour = np.where(is_peak_hour_cond, 1.0, 0.0)
+
+    # conn_heating_load = conns * temp_heating_sq
+    temp_rolling_avg_poste = temp_rolling_avg * poste_c
+    temp_rolling_avg_cos = temp_rolling_avg * df['heure_cos']
+
+    return {
+        EngFeature.energy_lag: energy_lag,
+        EngFeature.energy_rolling: energy_rolling,
+        # EngFeature.conns_lag_1h: conns_lag_1h,
+        EngFeature.conns_scaled: conns_scaled,
+        # EngFeature.conns_trend_1h: conns_trend_1h,
+        # EngFeature.temp_rolling_avg: temp_rolling_avg,
+        # EngFeature.temp_heating: temp_heating,
+        EngFeature.temp_heating_pow: temp_heating_pow,
+        # EngFeature.temp_cooling: temp_cooling,
+        # EngFeature.is_peak_hour: is_peak_hour,
+        # EngFeature.irradiance_rolling_24h: irradiance_rolling_24h,
+        # EngFeature.poste_enc: poste_enc,
+        # EngFeature.poste_b: poste_b,
+        EngFeature.poste_c: poste_c,
+        # EngFeature.energy_per_conn_lag_1h: energy_per_conn_lag_1h,
+        # EngFeature.poste_a_heating: poste_a_heating,
+        # EngFeature.poste_b_heating: poste_b_heating,
+        # EngFeature.poste_c_heating: poste_c_heating,
+        # EngFeature.poste_c_cooling: poste_c_cooling,
+        
+        # EngFeature.conn_heating_load: conn_heating_load,
+        # EngFeature.temp_rolling_avg_poste: temp_rolling_avg_poste
+        # EngFeature.temp_rolling_avg_cos: temp_rolling_avg_cos,
+        EngFeature.temp_heating_wind: temp_heating_wind,
+    }
+```
