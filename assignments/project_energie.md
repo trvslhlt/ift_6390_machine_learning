@@ -870,3 +870,18 @@ for i in range(min(3, len(S))):
     top_features = [(svd_features[j], Vt[i, j].round(3)) for j in top_idx]
     print(f"  PC{i+1}: {top_features}")
 ```
+
+Post ridge correlation matrix
+
+```python
+# Correlation matrix to understand feature relationships
+import seaborn as sns
+
+corr_df = train_eng[features_disponibles + ['energie_kwh']].corr()
+
+plt.figure(figsize=(14, 12))
+sns.heatmap(corr_df, annot=True, fmt='.2f', cmap='coolwarm', center=0, 
+            annot_kws={'size': 8})
+plt.title('Feature Correlation Matrix')
+plt.tight_layout()
+```
