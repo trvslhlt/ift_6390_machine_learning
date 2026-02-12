@@ -763,3 +763,110 @@ def create_custom_features(df: pd.DataFrame):
         EngFeature.temp_heating_wind: temp_heating_wind,
     }
 ```
+
+Feature importance
+
+```python
+# Feature importance visualization (scaled coefficients are directly comparable)
+sorted_idx = np.argsort(np.abs(model_ridge.coef_))
+plt.figure(figsize=(10, 8))
+plt.barh(np.array(features_disponibles)[sorted_idx], np.abs(model_ridge.coef_)[sorted_idx])
+plt.xlabel('|Coefficient| (on scaled features)')
+plt.title('Feature Importance (Ridge)')
+plt.tight_layout()
+```
+
+SVD
+
+```python
+# SVD Analysis
+from sklearn.preprocessing import StandardScaler
+
+# Select numeric features for SVD (exclude target and non-numeric)
+svd_features = features_disponibles
+X_svd = X_train_scaled
+y_svd = y_train_reg
+
+# Scale features (important for SVD)
+scaler_svd = StandardScaler()
+X_svd_scaled = scaler_svd.fit_transform(X_svd)
+
+# Apply SVD
+U, S, Vt = np.linalg.svd(X_svd_scaled, full_matrices=False)
+
+# Calculate explained variance ratio
+explained_variance = (S ** 2) / (len(X_svd_scaled) - 1)
+total_variance = explained_variance.sum()
+explained_variance_ratio = explained_variance / total_variance
+cumulative_variance_ratio = np.cumsum(explained_variance_ratio)
+
+# Visualizations
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# 1. Scree plot - Singular values
+ax = axes[0, 0]
+ax.bar(range(1, len(S) + 1), S, alpha=0.7, label='Singular Values')
+ax.set_xlabel('Component')
+ax.set_ylabel('Singular Value')
+ax.set_title('Scree Plot - Singular Values')
+ax.set_xticks(range(1, len(S) + 1))
+
+# 2. Explained variance ratio
+ax = axes[0, 1]
+ax.bar(range(1, len(S) + 1), explained_variance_ratio * 100, alpha=0.7, label='Individual')
+ax.plot(range(1, len(S) + 1), cumulative_variance_ratio * 100, 'ro-', label='Cumulative')
+ax.axhline(y=90, color='gray', linestyle='--', alpha=0.5, label='90% threshold')
+ax.set_xlabel('Component')
+ax.set_ylabel('Explained Variance (%)')
+ax.set_title('Explained Variance Ratio')
+ax.set_xticks(range(1, len(S) + 1))
+ax.legend()
+
+# 3. 2D projection (first 2 principal components)
+ax = axes[1, 0]
+# Project data onto first 2 components
+X_projected = U[:, :2] * S[:2]
+scatter = ax.scatter(X_projected[:, 0], X_projected[:, 1], 
+                     c=y_svd, cmap='viridis', alpha=0.3, s=5)
+ax.set_xlabel('PC1')
+ax.set_ylabel('PC2')
+ax.set_title('2D Projection (colored by energie_kwh)')
+plt.colorbar(scatter, ax=ax, label='energie_kwh')
+
+# 4. Feature loadings for top 3 components
+ax = axes[1, 1]
+n_components = 3
+loadings = Vt[:n_components, :].T  # Features x Components
+x_pos = np.arange(len(svd_features))
+width = 0.25
+for i in range(n_components):
+    ax.barh(x_pos + i * width, np.abs(loadings[:, i]), width, label=f'PC{i+1}', alpha=0.7)
+ax.set_yticks(x_pos + width)
+ax.set_yticklabels(svd_features)
+ax.set_xlabel('|Loading|')
+ax.set_title('Feature Loadings (Top 3 Components)')
+ax.legend()
+
+plt.tight_layout()
+
+# Print summary
+print("=" * 60)
+print("SVD ANALYSIS SUMMARY")
+print("=" * 60)
+print(f"\nNumber of features: {len(svd_features)}")
+print(f"Number of samples: {len(X_svd_scaled)}")
+print(f"\nSingular values: {S.round(2)}")
+print(f"\nExplained variance ratio: {(explained_variance_ratio * 100).round(2)}%")
+print(f"Cumulative variance: {(cumulative_variance_ratio * 100).round(2)}%")
+
+# Components needed for 90% variance
+n_90 = np.argmax(cumulative_variance_ratio >= 0.90) + 1
+print(f"\nComponents needed for 90% variance: {n_90}")
+
+# Top features for each component
+print("\nTop 3 features per component:")
+for i in range(min(3, len(S))):
+    top_idx = np.argsort(np.abs(Vt[i, :]))[::-1][:3]
+    top_features = [(svd_features[j], Vt[i, j].round(3)) for j in top_idx]
+    print(f"  PC{i+1}: {top_features}")
+```
