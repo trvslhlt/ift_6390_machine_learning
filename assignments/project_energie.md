@@ -885,3 +885,101 @@ sns.heatmap(corr_df, annot=True, fmt='.2f', cmap='coolwarm', center=0,
 plt.title('Feature Correlation Matrix')
 plt.tight_layout()
 ```
+
+confusion matrix
+
+```python
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
+
+# 9. Visualization for Option B
+fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+
+# 9a. Confusion matrix
+cm = confusion_matrix(y_test_mc, y_pred_mc)
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=axes[0, 0],
+            xticklabels=class_names, yticklabels=class_names)
+axes[0, 0].set_xlabel('Predicted')
+axes[0, 0].set_ylabel('Actual')
+axes[0, 0].set_title('Multi-class Confusion Matrix')
+
+# 9b. Class probability distributions
+axes[0, 1].hist(test_eng['p_low'], bins=30, alpha=0.5, label='p_low')
+axes[0, 1].hist(test_eng['p_medium'], bins=30, alpha=0.5, label='p_medium')
+axes[0, 1].hist(test_eng['p_high'], bins=30, alpha=0.5, label='p_high')
+axes[0, 1].set_xlabel('Probability')
+axes[0, 1].set_ylabel('Frequency')
+axes[0, 1].set_title('Softmax Probability Distributions (Test)')
+axes[0, 1].legend()
+
+# 9c. Actual energy vs P(High)
+axes[1, 0].scatter(test_eng['p_high'], test_eng['energie_kwh'], alpha=0.3, s=10)
+axes[1, 0].set_xlabel('p_high')
+axes[1, 0].set_ylabel('Actual Energy (kWh)')
+axes[1, 0].set_title('Energy vs p_high - Softmax')
+
+# 9d. Predictions comparison
+axes[1, 1].scatter(y_test_proba, y_pred_with_proba, alpha=0.3, s=10, label='With probabilities')
+axes[1, 1].scatter(y_test_final, y_pred_final, alpha=0.3, s=10, label='Baseline')
+axes[1, 1].plot([0, 500], [0, 500], 'r--', label='Perfect')
+axes[1, 1].set_xlabel('Actual Energy (kWh)')
+axes[1, 1].set_ylabel('Predicted Energy (kWh)')
+axes[1, 1].set_title('Predictions: Baseline vs With Softmax Probabilities')
+axes[1, 1].legend()
+axes[1, 1].set_xlim(0, 500)
+axes[1, 1].set_ylim(0, 500)
+
+plt.tight_layout()
+```
+
+final model feature residual plots
+
+```python
+# create plots of residual vs each feature in the training set with model_with_proba
+import math
+
+# Make predictions on training data
+y_train_pred_proba = model_with_proba.predict(X_train_proba_scaled)
+train_residuals = y_train_proba - y_train_pred_proba
+
+# Create analysis dataframe
+analysis_df = train_eng.copy()
+analysis_df['residual'] = train_residuals
+analysis_df['residual_abs'] = np.abs(train_residuals)
+analysis_df = analysis_df[analysis_df['residual_abs'] < 2000]
+
+# Combine model features with original quantitative features
+original_quant_features = [
+    'temperature_ext', 'humidite', 'vitesse_vent', 'neige', 'irradiance_solaire',
+    'heure', 'mois', 'jour_semaine', 'clients_connectes', 'tstats_intelligents_connectes'
+]
+# Add any features not already in features_with_proba
+plot_features = list(features_with_proba)
+for f in original_quant_features:
+    if f not in plot_features and f in analysis_df.columns:
+        plot_features.append(f)
+
+# Create subplots grid
+n_features = len(plot_features)
+n_cols = 3
+n_rows = math.ceil(n_features / n_cols)
+
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 4 * n_rows))
+axes = axes.flatten()
+
+for idx, feature in enumerate(plot_features):
+    ax = axes[idx]
+    ax.scatter(analysis_df[feature], analysis_df['residual'], alpha=0.2, s=5)
+    ax.axhline(0, color='red', linestyle='--', linewidth=1)
+    ax.set_xlabel(feature)
+    ax.set_ylabel('Residual')
+    ax.set_title(f'Residual vs {feature}')
+    ax.grid(True, alpha=0.3)
+
+# Hide unused subplots
+for idx in range(n_features, len(axes)):
+    axes[idx].set_visible(False)
+
+plt.suptitle('Residual Analysis: model_with_proba on Training Data', y=1.02, fontsize=14)
+plt.tight_layout()
+```
