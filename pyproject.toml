@@ -25,6 +25,7 @@ dependencies = [
 
     # Data
     "ucimlrepo>=0.0.3",
+    "meteostat>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -39,3 +40,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ift6390"]
+
+[tool.pyright]
+typeCheckingMode = "basic"
+reportArgumentType = false
+reportAttributeAccessIssue = false
