@@ -21,6 +21,7 @@ dependencies = [
     "ipywidgets>=8.0.0",
 
     # Utilities
+    "pip",
     "tqdm>=4.65.0",
 
     # Data
