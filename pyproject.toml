@@ -28,10 +28,6 @@ dependencies = [
     "ucimlrepo>=0.0.3",
     "meteostat>=2.0.0",
     "networkx>=3.0",
-]
-
-[project.optional-dependencies]
-deep = [
     "torch>=2.0.0",
     "torchvision>=0.15.0",
 ]
@@ -47,3 +43,4 @@ packages = ["src/ift6390"]
 typeCheckingMode = "basic"
 reportArgumentType = false
 reportAttributeAccessIssue = false
+extraPaths = ["./assignments/assignment_2/src"]

@@ -39,3 +39,6 @@ data/*.parquet
 # Secrets
 .env
 *.key
+
+# logs
+**/logs/*

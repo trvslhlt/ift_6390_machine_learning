@@ -612,14 +612,10 @@ dependencies = [
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "seaborn" },
-    { name = "tqdm" },
-    { name = "ucimlrepo" },
-]
-
-[package.optional-dependencies]
-deep = [
     { name = "torch" },
     { name = "torchvision" },
+    { name = "tqdm" },
+    { name = "ucimlrepo" },
 ]
 
 [package.metadata]
@@ -636,12 +632,11 @@ requires-dist = [
     { name = "scikit-learn", specifier = ">=1.3.0" },
     { name = "scipy", specifier = ">=1.11.0" },
     { name = "seaborn", specifier = ">=0.12.0" },
-    { name = "torch", marker = "extra == 'deep'", specifier = ">=2.0.0" },
-    { name = "torchvision", marker = "extra == 'deep'", specifier = ">=0.15.0" },
+    { name = "torch", specifier = ">=2.0.0" },
+    { name = "torchvision", specifier = ">=0.15.0" },
     { name = "tqdm", specifier = ">=4.65.0" },
     { name = "ucimlrepo", specifier = ">=0.0.3" },
 ]
-provides-extras = ["deep"]
 
 [[package]]
 name = "ipykernel"
