@@ -13,7 +13,15 @@ def run_1_1(device: str, logs_dir: str, models_dir: str):
     momentum = 0.9
     hidden_sizes = [20, 30] # 2 hidden layers
 
-    logs = {'model': None, 'epoch': [], 'batch': []}
+    logs = {
+        'experiment': {
+            'model': {},
+            'hyperparams': {
+                'epochs': epochs,
+                'learning_rate': learning_rate,
+                'mommentum': momentum,
+            },
+        }, 'epoch': [], 'batch': []}
 
     training_dataloader, validation_dataloader = get_smiles_dataloaders()
     feature_count = training_dataloader.dataset.tensors[0].shape[1]
@@ -29,7 +37,7 @@ def run_1_1(device: str, logs_dir: str, models_dir: str):
         print(f'epoch: {kwargs["epoch"]}, batch_idx: {kwargs["batch"]}')
 
     def on_epoch_end(model, **kwargs):
-        logs['model'] = model.describe()
+        logs['experiment']['model'] = model.describe()
         logs['epoch'].append(kwargs)
 
     train(
