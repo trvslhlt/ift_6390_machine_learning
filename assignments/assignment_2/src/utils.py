@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 import json
 import os
@@ -5,8 +6,16 @@ import os
 import torch
 
 
-def file_timestamp():
+def file_timestamp() -> str:
     return datetime.now().strftime("%Y_%m_%d__%H_%M_%S")
+
+
+def iso_timestamp() -> str:
+    return datetime.now().isoformat()
+
+
+def unix_timestamp() -> float:
+    return time.time()
 
 
 def save_logs(logs: dict, logs_dir: str, filename: str):

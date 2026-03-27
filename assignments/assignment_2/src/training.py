@@ -5,12 +5,6 @@ import torch
 from torch.utils.data import DataLoader
 
 
-def _r2_score(preds: torch.Tensor, targets: torch.Tensor) -> float:
-    ss_res = ((targets - preds) ** 2).sum()
-    ss_tot = ((targets - targets.mean()) ** 2).sum()
-    return 1.0 - (ss_res / ss_tot).item()
-
-
 def train(
         model: torch.nn.Module,
         epochs: int,
@@ -36,12 +30,14 @@ def train(
             pred = model(X)
             loss = loss_fn(pred, y)
             loss.backward()
+            grad_norms = _layer_grad_norms(model)
             optimizer.step()
             train_loss_sum += loss.item() * X.size(0)
             train_count += X.size(0)
             if on_batch_end:
                 on_batch_end(
                     epoch=epoch, batch=batch_idx, loss=loss.item(), model=model,
+                    grad_norms=grad_norms,
                     batch_time=time.perf_counter() - batch_start,
                     elapsed=time.perf_counter() - train_start)
 
@@ -77,3 +73,17 @@ def train(
                 train_r2=train_r2, val_r2=val_r2,
                 epoch_time=time.perf_counter() - epoch_start,
                 elapsed=time.perf_counter() - train_start)
+
+
+def _layer_grad_norms(model: torch.nn.Module) -> list[float]:
+    norms = []
+    for module in model.modules():
+        if isinstance(module, torch.nn.Linear) and module.weight.grad is not None:
+            norms.append(module.weight.grad.norm(2).item())
+    return norms
+
+
+def _r2_score(preds: torch.Tensor, targets: torch.Tensor) -> float:
+    ss_res = ((targets - preds) ** 2).sum()
+    ss_tot = ((targets - targets.mean()) ** 2).sum()
+    return 1.0 - (ss_res / ss_tot).item()
