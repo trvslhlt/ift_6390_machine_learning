@@ -1,4 +1,4 @@
-from data_management import get_smiles_dataloaders
+from data_prep import get_smiles_dataloaders
 from models import MLP, Activation
 from training import train
 import utils
@@ -8,23 +8,25 @@ from torch import optim
 
 
 def run_1_1(device: str, logs_dir: str, models_dir: str):
-    epochs = 10
-    learning_rate = 1e-3
-    momentum = 0.9
-    hidden_sizes = [20, 30] # 2 hidden layers
-
+    epochs = 500
+    learning_rate = 1e-3 # 0.001
+    momentum = 0.0
+    hidden_sizes = [40, 20] # 2 hidden layers
+    
+    training_dataloader, validation_dataloader, target_stats = get_smiles_dataloaders()
+    feature_count = training_dataloader.dataset.tensors[0].shape[1]
+    
     logs = {
         'experiment': {
             'model': {},
             'hyperparams': {
                 'epochs': epochs,
                 'learning_rate': learning_rate,
-                'mommentum': momentum,
+                'momentum': momentum,
             },
+            'target_stats': target_stats,
         }, 'epoch': [], 'batch': []}
 
-    training_dataloader, validation_dataloader = get_smiles_dataloaders()
-    feature_count = training_dataloader.dataset.tensors[0].shape[1]
 
     model = MLP(
         input_size=feature_count,

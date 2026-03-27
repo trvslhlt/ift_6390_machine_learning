@@ -40,11 +40,11 @@ class MLP(torch.nn.Module):
 
     def describe(self) -> dict:
         return {
-            "input_size": self.input_size,
-            "hidden_sizes": self.hidden_sizes,
-            "output_size": self.output_size,
-            "activation": self.activation.value,
-            "num_params": sum(p.numel() for p in self.parameters()),
+            'input_size': self.input_size,
+            'hidden_sizes': self.hidden_sizes,
+            'output_size': self.output_size,
+            'activation': self.activation.value,
+            'num_params': sum(p.numel() for p in self.parameters()),
         }
 
     def forward(self, x):
