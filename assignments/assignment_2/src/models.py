@@ -29,7 +29,7 @@ class MLP(torch.nn.Module):
             output_size: int, 
             activation: Activation,
             initialization: Initialization | None,
-            dropout: float | None = None,
+            dropout: float,
             batch_norm: bool = False,
         ):
         super(MLP, self).__init__()
@@ -38,7 +38,7 @@ class MLP(torch.nn.Module):
         self.hidden_sizes = hidden_sizes
         self.output_size = output_size
         self.activation = activation
-        self.dropout = None if dropout is None else torch.nn.Dropout(dropout)
+        self.dropout = torch.nn.Dropout(dropout)
 
         layers = []
         prev_size = input_size
@@ -46,8 +46,7 @@ class MLP(torch.nn.Module):
             layers.append(torch.nn.Linear(prev_size, hidden_size))
             if batch_norm:
                 layers.append(torch.nn.BatchNorm1d(hidden_size))
-            if self.dropout is not None:
-                layers.append(self.dropout)
+            layers.append(self.dropout)
             layers.append(_ACTIVATION_MODULES[activation]())
             prev_size = hidden_size
         layers.append(torch.nn.Linear(prev_size, output_size))

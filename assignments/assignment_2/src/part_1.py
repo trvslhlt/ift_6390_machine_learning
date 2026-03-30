@@ -68,13 +68,14 @@ def run_1(config: RunConfig):
         }, 'epoch': [], 'batch': []}
 
     initialization = None if hp.initialization is None else Initialization(hp.initialization)
+    dropout = 0 if hp.dropout is None else hp.dropout
     model = MLP(
         input_size=feature_count,
         hidden_sizes=hp.hidden_sizes,
         output_size=1, # regression, single value prediction
         activation=Activation(hp.activation),
         initialization=initialization,
-        dropout=hp.dropout,
+        dropout=dropout,
         batch_norm=hp.batch_norm,
     ).to(config.device)
     optimizer = _get_optimizer(hp.optimizer, model.parameters(), hp.lr, hp.momentum)
