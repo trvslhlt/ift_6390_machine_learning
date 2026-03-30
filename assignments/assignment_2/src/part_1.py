@@ -1,5 +1,5 @@
 from data_prep import get_smiles_dataloaders
-from models import MLP, Activation
+from models import MLP, Activation, Initialization
 from training import train
 import utils
 
@@ -26,6 +26,7 @@ class Hyperparams:
     activation: str
     dropout: float | None
     batch_norm: bool
+    initialization: str | None
 
     optimizer: str
     lr: float
@@ -37,10 +38,12 @@ class RunConfig:
     device: str
     output: Output
     hyperparams: Hyperparams
+    subpart: str
 
 
 def run_1(config: RunConfig):
     hp = config.hyperparams
+    exp_id = f'{ARTIFACT_PREFIX}_{config.subpart}'
     
     training_dataloader, validation_dataloader, target_stats = get_smiles_dataloaders()
     feature_count = training_dataloader.dataset.tensors[0].shape[1]
@@ -50,6 +53,7 @@ def run_1(config: RunConfig):
         'metadata': {
             'start_time': utils.iso_timestamp(),
             'device': str(config.device),
+            'exp_id': exp_id,
         },
         'experiment': {
             'model': {},
@@ -63,12 +67,16 @@ def run_1(config: RunConfig):
             },
         }, 'epoch': [], 'batch': []}
 
-
+    initialization = None if hp.initialization is None else Initialization(hp.initialization)
     model = MLP(
         input_size=feature_count,
         hidden_sizes=hp.hidden_sizes,
         output_size=1, # regression, single value prediction
-        activation=Activation(hp.activation))
+        activation=Activation(hp.activation),
+        initialization=initialization,
+        dropout=hp.dropout,
+        batch_norm=hp.batch_norm,
+    ).to(config.device)
     optimizer = _get_optimizer(hp.optimizer, model.parameters(), hp.lr, hp.momentum)
 
     def on_batch_end(model, **kwargs):
@@ -94,9 +102,8 @@ def run_1(config: RunConfig):
     logs['metadata']['end_time'] = utils.iso_timestamp()
     logs['metadata']['elapsed_time'] = utils.unix_timestamp() - start_time
 
-    artifact_id = f'{ARTIFACT_PREFIX}_1'
-    utils.save_logs(logs, config.output.logs_dir, f'{artifact_id}__{utils.file_timestamp()}')
-    utils.save_model(model, config.output.models_dir, f'{artifact_id}__{utils.file_timestamp()}')
+    utils.save_logs(logs, config.output.logs_dir, f'{exp_id}__{utils.file_timestamp()}')
+    utils.save_model(model, config.output.models_dir, f'{exp_id}__{utils.file_timestamp()}')
 
 
 def _get_optimizer(name: str, params, lr: float | None, momentum: float | None) -> optim.Optimizer:

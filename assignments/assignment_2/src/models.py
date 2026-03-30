@@ -3,15 +3,21 @@ from enum import Enum
 
 
 class Activation(Enum):
-    RELU = "relu"
-    TANH = "tanh"
-    SIGMOID = "sigmoid"
-
+    RELU = 'relu'
+    TANH = 'tanh'
+    SIGMOID = 'sigmoid'
 
 _ACTIVATION_MODULES = {
     Activation.RELU: torch.nn.ReLU,
     Activation.TANH: torch.nn.Tanh,
     Activation.SIGMOID: torch.nn.Sigmoid,
+}
+
+class Initialization(Enum):
+    HE = 'he'
+
+_INITIALIZATION_MODULES = {
+    Initialization.HE: torch.nn.init.kaiming_normal_,
 }
 
 
@@ -21,22 +27,33 @@ class MLP(torch.nn.Module):
             input_size: int, 
             hidden_sizes: list[int], 
             output_size: int, 
-            activation: Activation):
+            activation: Activation,
+            initialization: Initialization | None,
+            dropout: float | None = None,
+            batch_norm: bool = False,
+        ):
         super(MLP, self).__init__()
 
         self.input_size = input_size
         self.hidden_sizes = hidden_sizes
         self.output_size = output_size
         self.activation = activation
-        
+        self.dropout = None if dropout is None else torch.nn.Dropout(dropout)
+
         layers = []
         prev_size = input_size
         for hidden_size in hidden_sizes:
             layers.append(torch.nn.Linear(prev_size, hidden_size))
+            if batch_norm:
+                layers.append(torch.nn.BatchNorm1d(hidden_size))
+            if self.dropout is not None:
+                layers.append(self.dropout)
             layers.append(_ACTIVATION_MODULES[activation]())
             prev_size = hidden_size
         layers.append(torch.nn.Linear(prev_size, output_size))
         self.network = torch.nn.Sequential(*layers)
+        self._initialize_params(initialization)
+
 
     def describe(self) -> dict:
         return {
@@ -49,6 +66,16 @@ class MLP(torch.nn.Module):
 
     def forward(self, x):
         return self.network(x)
+    
+    def _initialize_params(self, initialization: Initialization | None):
+        if initialization is None:
+            return
+
+        init_fn = _INITIALIZATION_MODULES[initialization]
+        for module in self.network.modules():
+            if isinstance(module, torch.nn.Linear):
+                init_fn(module.weight)
+                torch.nn.init.zeros_(module.bias)
 
 
 # Utility functions
