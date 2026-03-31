@@ -12,6 +12,7 @@ SEED = 42
 
 class SmilesIndicesDataset(Dataset):
     def __init__(self, smiles_list, targets, char_to_idx):
+        super().__init__()
         self.sequences = [torch.tensor([char_to_idx[c] for c in s], dtype=torch.long) for s in smiles_list]
         self.targets = torch.tensor(targets, dtype=torch.float32)
 
@@ -34,7 +35,7 @@ def get_smiles_embed_seq_dataloaders(
         batch_size: int = 64,
         test_proportion: float = 0.2,
         standardize_targets: bool = True,
-) -> tuple[DataLoader, DataLoader, dict, int]:
+) -> tuple[DataLoader, DataLoader, dict, int, int]:
     df = get_smiles_df()
 
     train_df, val_df = train_test_split(df, test_size=test_proportion, random_state=SEED)
@@ -63,7 +64,9 @@ def get_smiles_embed_seq_dataloaders(
         collate_fn=collate_fn)
 
     num_embeddings = len(vocab) + 1 # +1 for padding idx 0
-    return train_loader, val_loader, target_stats, num_embeddings
+    max_seq_len = max(len(s) for s in df["smiles"])
+
+    return train_loader, val_loader, target_stats, num_embeddings, max_seq_len
 
 
 def get_smiles_dataloaders(
