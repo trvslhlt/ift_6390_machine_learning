@@ -16,8 +16,8 @@ class Hyperparams:
     hidden_size: int
     optimizer: str
     lr: float
-    momentum: float | None = None
-
+    dropout: float | None = None
+    is_bidirectional: bool = False
 
 @dataclass
 class RunConfig:
@@ -58,9 +58,11 @@ def run_2(config: RunConfig):
         num_embeddings=num_embeddings,
         embedding_size=hp.embedding_size,
         hidden_size=hp.hidden_size,
-        output_size=1 # regression, single value prediction
+        output_size=1, # regression, single value prediction
+        dropout_proportion=hp.dropout if hp.dropout is not None else 0.0,
+        is_bidirectional=hp.is_bidirectional,
     )
-    optimizer = utils.get_optimizer(hp.optimizer, model.parameters(), hp.lr, hp.momentum)
+    optimizer = utils.get_optimizer(hp.optimizer, model.parameters(), hp.lr, 0)
     logs['experiment']['model'] = model.describe()
 
     def on_batch_end(**kwargs):

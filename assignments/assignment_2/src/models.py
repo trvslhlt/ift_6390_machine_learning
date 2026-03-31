@@ -84,18 +84,27 @@ class LSTM(torch.nn.Module):
             num_embeddings: int,
             embedding_size: int,
             hidden_size: int,
-            output_size: int
+            output_size: int,
+            dropout_proportion: float = 0.0,
+            is_bidirectional: bool = False,
         ):
         super(LSTM, self).__init__()
         self.embedding = torch.nn.Embedding(num_embeddings, embedding_size, padding_idx=0)
-        self.lstm = torch.nn.LSTM(embedding_size, hidden_size, batch_first=True)
-        self.linear = torch.nn.Linear(hidden_size, output_size)
+        self.lstm = torch.nn.LSTM(embedding_size, hidden_size, batch_first=True, bidirectional=is_bidirectional)
+        self.dropout = torch.nn.Dropout(dropout_proportion)
+        linear_hidden_size = hidden_size * 2 if is_bidirectional else hidden_size
+        self.linear = torch.nn.Linear(linear_hidden_size, output_size)
 
     def forward(self, x, lengths):
         x = self.embedding(x)
         packed = pack_padded_sequence(x, lengths.cpu(), batch_first=True, enforce_sorted=False)
         _, (h_n, _) = self.lstm(packed)
-        return self.linear(h_n.squeeze(0))
+        if self.lstm.bidirectional:
+            h_n = torch.cat((h_n[0], h_n[1]), dim=1)
+        else:
+            h_n = h_n.squeeze(0)
+        h_n = self.dropout(h_n)
+        return self.linear(h_n)
 
     def describe(self) -> dict:
         return {
