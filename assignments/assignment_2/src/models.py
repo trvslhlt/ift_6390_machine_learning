@@ -91,6 +91,8 @@ class LSTM(torch.nn.Module):
             is_bidirectional: bool = False,
         ):
         super().__init__()
+        self.dropout_proportion = dropout_proportion
+
         self.embedding = torch.nn.Embedding(num_embeddings, embedding_size, padding_idx=0)
         self.lstm = torch.nn.LSTM(
             embedding_size, 
@@ -117,7 +119,7 @@ class LSTM(torch.nn.Module):
             'embedding_size': self.embedding.embedding_dim,
             'hidden_size': self.lstm.hidden_size,
             'output_size': self.linear.out_features,
-            'dropout_proportion': self.dropout.p,
+            'dropout_proportion': self.dropout_proportion,
             'is_bidirectional': self.lstm.bidirectional,
             'num_params': sum(p.numel() for p in self.parameters()),
         }

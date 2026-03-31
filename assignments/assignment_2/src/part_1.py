@@ -16,7 +16,7 @@ class Hyperparams:
     activation: str
     optimizer: str
     lr: float
-    momentum: float | None
+    momentum: float | None = None
     dropout: float | None = None
     batch_norm: bool = False
     initialization: str | None = None

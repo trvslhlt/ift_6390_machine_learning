@@ -24,12 +24,13 @@ class SmilesIndicesDataset(Dataset):
         return self.sequences[idx], self.targets[idx]
 
 
-def collate_fn(batch):
+def collate_fn(batch: list[tuple[torch.Tensor, torch.Tensor]]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    '''given a batch of (sequence, target), pads the sequences and notes their original lengths'''
     sequences, targets = zip(*batch)
     lengths = torch.tensor([len(s) for s in sequences], dtype=torch.long)
     padded_sequences = pad_sequence(sequences, batch_first=True, padding_value=0)
     targets = torch.stack(targets)
-    return padded_sequences, lengths, targets
+    return padded_sequences, lengths, targets # keep convention of (*inputs, targets) for training loop
 
 
 def get_smiles_embed_seq_dataloaders(
@@ -37,6 +38,7 @@ def get_smiles_embed_seq_dataloaders(
         test_proportion: float = 0.2,
         standardize_targets: bool = True,
 ) -> tuple[DataLoader, DataLoader, dict, int, int]:
+    '''creates dataloaders for indexed sequences, returns them along with dataset metrics'''
     df = get_smiles_df()
 
     train_df, val_df = train_test_split(df, test_size=test_proportion, random_state=SEED)
@@ -75,6 +77,7 @@ def get_smiles_dataloaders(
         test_proportion: float = 0.2,
         standardize_targets: bool = True,
 ) -> tuple[DataLoader, DataLoader, dict]:
+    '''creates dataloaders for count-based features, returns them along with dataset metrics'''
     df = get_smiles_df()
 
     train_df, val_df = train_test_split(df, test_size=test_proportion, random_state=SEED)
