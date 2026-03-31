@@ -36,7 +36,9 @@ def train(
             train_count += X.size(0)
             if on_batch_end:
                 on_batch_end(
-                    epoch=epoch, batch=batch_idx, loss=loss.item(), model=model,
+                    epoch=epoch, 
+                    batch=batch_idx, 
+                    loss=loss.item(),
                     grad_norms=grad_norms,
                     batch_time=time.perf_counter() - batch_start,
                     elapsed=time.perf_counter() - train_start)
@@ -68,9 +70,11 @@ def train(
         val_r2 = _r2_score(torch.cat(val_preds), torch.cat(val_targets))
         if on_epoch_end:
             on_epoch_end(
-                epoch=epoch, model=model,
-                train_loss=train_loss, val_loss=val_loss,
-                train_r2=train_r2, val_r2=val_r2,
+                epoch=epoch,
+                train_loss=train_loss, 
+                val_loss=val_loss,
+                train_r2=train_r2, 
+                val_r2=val_r2,
                 epoch_time=time.perf_counter() - epoch_start,
                 elapsed=time.perf_counter() - train_start)
 

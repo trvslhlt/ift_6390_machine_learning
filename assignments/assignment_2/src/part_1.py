@@ -9,9 +9,6 @@ import torch
 from torch import optim
 
 
-ARTIFACT_PREFIX = 'exp_1'
-
-
 @dataclass
 class Output:
     logs_dir: str
@@ -21,16 +18,14 @@ class Output:
 @dataclass
 class Hyperparams:
     epochs: int
-
     hidden_sizes: list[int]
     activation: str
-    dropout: float | None
-    batch_norm: bool
-    initialization: str | None
-
     optimizer: str
     lr: float
     momentum: float | None
+    dropout: float | None = None
+    batch_norm: bool = False
+    initialization: str | None = None
 
 
 @dataclass
@@ -38,12 +33,11 @@ class RunConfig:
     device: str
     output: Output
     hyperparams: Hyperparams
-    subpart: str
+    exp_id: str
 
 
 def run_1(config: RunConfig):
     hp = config.hyperparams
-    exp_id = f'{ARTIFACT_PREFIX}_{config.subpart}'
     
     training_dataloader, validation_dataloader, target_stats = get_smiles_dataloaders()
     feature_count = training_dataloader.dataset.tensors[0].shape[1]
@@ -53,7 +47,7 @@ def run_1(config: RunConfig):
         'metadata': {
             'start_time': utils.iso_timestamp(),
             'device': str(config.device),
-            'exp_id': exp_id,
+            'exp_id': config.exp_id,
         },
         'experiment': {
             'model': {},
@@ -77,15 +71,15 @@ def run_1(config: RunConfig):
         initialization=initialization,
         dropout=dropout,
         batch_norm=hp.batch_norm,
-    ).to(config.device)
+    )
     optimizer = _get_optimizer(hp.optimizer, model.parameters(), hp.lr, hp.momentum)
+    logs['experiment']['model'] = model.describe()
 
-    def on_batch_end(model, **kwargs):
+    def on_batch_end(**kwargs):
         logs['batch'].append(kwargs)
         print(f'epoch: {kwargs["epoch"]}, batch_idx: {kwargs["batch"]}')
 
-    def on_epoch_end(model, **kwargs):
-        logs['experiment']['model'] = model.describe()
+    def on_epoch_end(**kwargs):
         logs['epoch'].append(kwargs)
 
     train(
@@ -103,8 +97,8 @@ def run_1(config: RunConfig):
     logs['metadata']['end_time'] = utils.iso_timestamp()
     logs['metadata']['elapsed_time'] = utils.unix_timestamp() - start_time
 
-    utils.save_logs(logs, config.output.logs_dir, f'{exp_id}__{utils.file_timestamp()}')
-    utils.save_model(model, config.output.models_dir, f'{exp_id}__{utils.file_timestamp()}')
+    utils.save_logs(logs, config.output.logs_dir, f'{config.exp_id}__{utils.file_timestamp()}')
+    utils.save_model(model, config.output.models_dir, f'{config.exp_id}__{utils.file_timestamp()}')
 
 
 def _get_optimizer(name: str, params, lr: float | None, momentum: float | None) -> optim.Optimizer:

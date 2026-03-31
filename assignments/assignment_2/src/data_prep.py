@@ -11,6 +11,7 @@ SEED = 42
 def get_smiles_dataloaders(
         batch_size: int = 64,
         test_proportion: float = 0.2,
+        standardize_targets: bool = True,
 ) -> tuple[DataLoader, DataLoader, dict]:
     df = get_smiles_df()
 
@@ -26,8 +27,10 @@ def get_smiles_dataloaders(
 
     y_mean = y_train.mean()
     y_std = y_train.std()
-    y_train = (y_train - y_mean) / y_std
-    y_val = (y_val - y_mean) / y_std
+
+    if standardize_targets:
+        y_train = (y_train - y_mean) / y_std
+        y_val = (y_val - y_mean) / y_std
 
     target_stats = {"mean": float(y_mean), "std": float(y_std)}
 
@@ -56,6 +59,6 @@ def get_smiles_df():
     df_raw = pd.read_csv(URL)
     df = df_raw[df_raw[F_LABEL].notna() & df_raw[F_SMILES].notna()].copy()
     df = df[[F_SMILES, F_LABEL]].reset_index(drop=True)
-    df.columns = ["smiles", "target"]
+    df.columns = ['smiles', 'target']
 
     return df
