@@ -31,7 +31,17 @@ data/*.csv
 data/*.zip
 data/*.parquet
 !data/sample_*.csv
+**/data/*.csv
+**/data/*.zip
+**/data/*.parquet
+!**/data/sample_*.csv
 
 # Secrets
 .env
 *.key
+
+# logs
+**/logs/*
+
+# models
+**/models/*
