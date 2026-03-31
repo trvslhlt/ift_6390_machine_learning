@@ -11,7 +11,8 @@ SEED = 42
 
 
 class SmilesIndicesDataset(Dataset):
-    def __init__(self, smiles_list, targets, char_to_idx):
+    '''custom dataset providing indexed smiles character sequences'''
+    def __init__(self, smiles_list: list[str], targets: np.ndarray, char_to_idx: dict):
         super().__init__()
         self.sequences = [torch.tensor([char_to_idx[c] for c in s], dtype=torch.long) for s in smiles_list]
         self.targets = torch.tensor(targets, dtype=torch.float32)
@@ -41,7 +42,7 @@ def get_smiles_embed_seq_dataloaders(
     train_df, val_df = train_test_split(df, test_size=test_proportion, random_state=SEED)
 
     vocab = sorted(set("".join(df["smiles"])))
-    char_to_idx = {c: i + 1 for i, c in enumerate(vocab)} # index from 1 to reserve 0 for padding
+    char_to_idx = {c: i + 1 for i, c in enumerate(vocab)} # index from 1 to reserve 0 for padding idx
 
     y_train = train_df["target"].values.astype(np.float32).reshape(-1, 1)
     y_val = val_df["target"].values.astype(np.float32).reshape(-1, 1)
@@ -114,17 +115,13 @@ def _smiles_to_features(smiles: str, char_to_idx: dict) -> np.ndarray:
     length = np.array([len(smiles)], dtype=np.float32)
     return np.concatenate([counts, length])
 
-def _smiles_to_indices(smiles: str, char_to_idx: dict, max_len: int) -> np.ndarray:
-    X = np.zeros(max_len, dtype=np.long)
-    indices = [char_to_idx[c] for c in smiles]
-    X[:len(indices)] = indices
-    return X
 
 def get_smiles_df():
+    '''download smiles data, filter rows and columns, and returns dataframe'''
     F_LABEL = 'Tc'
     F_SMILES = 'SMILES'
 
-    df_raw = pd.read_csv(URL)
+    df_raw = pd.read_csv(URL, low_memory=False)
     df = df_raw[df_raw[F_LABEL].notna() & df_raw[F_SMILES].notna()].copy()
     df = df[[F_SMILES, F_LABEL]].reset_index(drop=True)
     df.columns = ['smiles', 'target']

@@ -83,8 +83,8 @@ class MLP(torch.nn.Module):
 class LSTM(torch.nn.Module):
     def __init__(
             self,
-            num_embeddings: int,
-            embedding_size: int,
+            num_embeddings: int, # vocab size + 1 for padding
+            embedding_size: int, # dimensionality of token embeddings
             hidden_size: int,
             output_size: int,
             dropout_proportion: float,
@@ -92,8 +92,12 @@ class LSTM(torch.nn.Module):
         ):
         super().__init__()
         self.embedding = torch.nn.Embedding(num_embeddings, embedding_size, padding_idx=0)
-        self.lstm = torch.nn.LSTM(embedding_size, hidden_size, batch_first=True, bidirectional=is_bidirectional)
-        self.dropout = torch.nn.Dropout(dropout_proportion)
+        self.lstm = torch.nn.LSTM(
+            embedding_size, 
+            hidden_size, 
+            batch_first=True, # matches convention set in 'collate_fn'
+            dropout=dropout_proportion,
+            bidirectional=is_bidirectional)
         linear_hidden_size = hidden_size * 2 if is_bidirectional else hidden_size
         self.linear = torch.nn.Linear(linear_hidden_size, output_size)
 
@@ -105,7 +109,6 @@ class LSTM(torch.nn.Module):
             h_n = torch.cat((h_n[0], h_n[1]), dim=1)
         else:
             h_n = h_n.squeeze(0)
-        h_n = self.dropout(h_n)
         return self.linear(h_n)
 
     def describe(self) -> dict:
@@ -120,53 +123,65 @@ class LSTM(torch.nn.Module):
         }
 
 
-
 class Transformer(torch.nn.Module):
-
-    pos_encoding: torch.Tensor
 
     def __init__(
             self,
-            num_embeddings: int,
-            embedding_size: int,
-            num_heads: int,
+            num_embeddings: int, # vocab size + 1 for padding
+            embedding_size: int, # dimensionality of token embeddings and transformer d_model
+            num_heads: int, # attention heads
             num_encoder_layers: int,
             output_size: int,
-            max_seq_length: int,
+            max_seq_length: int, # max supported sequence length. used for positional encoding
             dropout_proportion: float,
         ):
         super().__init__()
+        self.num_embeddings = num_embeddings
+        self.embedding_size = embedding_size
+        self.num_heads = num_heads
+        self.num_encoder_layers = num_encoder_layers
+        self.output_size = output_size
+        self.max_seq_length = max_seq_length
+        self.dropout_proportion = dropout_proportion
+
         self.embedding = torch.nn.Embedding(num_embeddings, embedding_size, padding_idx=0)
         self.pos_encoding = self._sinusoidal_encoding(max_seq_length, embedding_size)
         encoder_layer = torch.nn.TransformerEncoderLayer(
-            d_model=embedding_size, 
-            nhead=num_heads, 
-            dropout=dropout_proportion)
+            d_model=embedding_size,
+            nhead=num_heads,
+            dropout=dropout_proportion,
+            batch_first=True)
         self.transformer = torch.nn.TransformerEncoder(encoder_layer, num_layers=num_encoder_layers)
         self.linear = torch.nn.Linear(embedding_size, output_size)
 
     def forward(self, x, _lengths):
+        # fail loudly if input sequence length is greater than max supported
+        msg = f'sequence length {x.size(1)} exceeds max_seq_length {self.max_seq_length}'
+        assert x.size(1) <= self.pos_encoding.size(1), msg
+    
         pad_mask = (x == 0)
         x = self.embedding(x)
         x = x + self.pos_encoding[:, :x.size(1), :]
         x = self.transformer(x, src_key_padding_mask=pad_mask)
-        mask = (~pad_mask).unsqueeze(-1).float()
-        x = (x * mask).sum(dim=1) / mask.sum(dim=1)  # mean pooling over non-padded tokens
+
+        # mean aggregation over non-padded positions
+        mask = (~pad_mask).unsqueeze(-1).float() # (batch_size, seq_len) -> (batch_size, seq_len, 1)
+        x = (x * mask).sum(dim=1) / mask.sum(dim=1) # (batch, embedding_size)
         return self.linear(x)
 
     def describe(self) -> dict:
         return {
             'num_embeddings': self.embedding.num_embeddings,
             'embedding_size': self.embedding.embedding_dim,
-            'num_heads': self.transformer.num_heads,
-            'num_encoder_layers': self.transformer.num_encoder_layers,
-            'output_size': self.linear.out_features,
+            'num_heads': self.num_heads,
+            'num_encoder_layers': self.num_encoder_layers,
+            'output_size': self.output_size,
             'max_seq_length': self.max_seq_length,
-            'dropout_proportion': self.dropout.p,
+            'dropout_proportion': self.dropout_proportion,
             'num_params': sum(p.numel() for p in self.parameters()),
         }
     
-    def _sinusoidal_encoding(self, max_len, d_model) -> torch.nn.Module:
+    def _sinusoidal_encoding(self, max_len, d_model) -> torch.Tensor:
         pe = torch.zeros(max_len, d_model)
         pos = torch.arange(0, max_len).unsqueeze(1).float()
         div = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))

@@ -71,10 +71,10 @@ def run_1(config: RunConfig):
 
     def on_batch_end(**kwargs):
         logs['batch'].append(kwargs)
-        print(f'epoch: {kwargs["epoch"]}, batch_idx: {kwargs["batch"]}')
 
     def on_epoch_end(**kwargs):
         logs['epoch'].append(kwargs)
+        print(f'epoch: {kwargs["epoch"]}, train_loss: {kwargs["train_loss"]:.4f}, val_loss: {kwargs["val_loss"]:.4f}')
 
     train(
         model=model,

@@ -12,9 +12,9 @@ from utils import Output
 class Hyperparams:
     epochs: int
     embedding_size: int
-    hidden_size: int
     optimizer: str
     lr: float
+    hidden_size: int | None = None
     dropout: float | None = None
     is_bidirectional: bool = False
     num_heads: int | None = None
@@ -69,10 +69,10 @@ def run_2(config: RunConfig):
 
     def on_batch_end(**kwargs):
         logs['batch'].append(kwargs)
-        print(f'epoch: {kwargs["epoch"]}, batch_idx: {kwargs["batch"]}')
 
     def on_epoch_end(**kwargs):
         logs['epoch'].append(kwargs)
+        print(f'epoch: {kwargs["epoch"]}, train_loss: {kwargs["train_loss"]:.4f}, val_loss: {kwargs["val_loss"]:.4f}')
 
     train(
         model=model,
