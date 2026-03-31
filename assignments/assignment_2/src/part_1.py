@@ -2,17 +2,11 @@ from data_prep import get_smiles_dataloaders
 from models import MLP, Activation, Initialization
 from training import train
 import utils
+from utils import Output
 
 from dataclasses import dataclass, asdict
 
 import torch
-from torch import optim
-
-
-@dataclass
-class Output:
-    logs_dir: str
-    models_dir: str
 
 
 @dataclass
@@ -22,7 +16,7 @@ class Hyperparams:
     activation: str
     optimizer: str
     lr: float
-    momentum: float | None
+    momentum: float | None = None
     dropout: float | None = None
     batch_norm: bool = False
     initialization: str | None = None
@@ -72,15 +66,15 @@ def run_1(config: RunConfig):
         dropout=dropout,
         batch_norm=hp.batch_norm,
     )
-    optimizer = _get_optimizer(hp.optimizer, model.parameters(), hp.lr, hp.momentum)
+    optimizer = utils.get_optimizer(hp.optimizer, model.parameters(), hp.lr, hp.momentum)
     logs['experiment']['model'] = model.describe()
 
     def on_batch_end(**kwargs):
         logs['batch'].append(kwargs)
-        print(f'epoch: {kwargs["epoch"]}, batch_idx: {kwargs["batch"]}')
 
     def on_epoch_end(**kwargs):
         logs['epoch'].append(kwargs)
+        print(f'epoch: {kwargs["epoch"]}, train_loss: {kwargs["train_loss"]:.4f}, val_loss: {kwargs["val_loss"]:.4f}')
 
     train(
         model=model,
@@ -99,15 +93,3 @@ def run_1(config: RunConfig):
 
     utils.save_logs(logs, config.output.logs_dir, f'{config.exp_id}__{utils.file_timestamp()}')
     utils.save_model(model, config.output.models_dir, f'{config.exp_id}__{utils.file_timestamp()}')
-
-
-def _get_optimizer(name: str, params, lr: float | None, momentum: float | None) -> optim.Optimizer:
-    lr = 0 if lr is None else lr
-    momentum = 0 if momentum is None else momentum
-
-    if name == 'sgd':
-        return optim.SGD(params, lr, momentum)
-    elif name == 'adam':
-        return optim.Adam(params, lr)
-    else:
-        raise Exception(f'optimizer not supported: "{name}"')
