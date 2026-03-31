@@ -23,17 +23,20 @@ def train(
         model.train()
         train_loss_sum = 0.0
         train_count = 0
-        for batch_idx, (X, y) in enumerate(training_dataloader):
+        for batch_idx, batch in enumerate(training_dataloader):
             batch_start = time.perf_counter()
-            X, y = X.to(device), y.to(device)
             optimizer.zero_grad()
-            pred = model(X)
+
+            y = batch[-1].to(device)
+            inputs = [b.to(device) for b in batch[:-1]]
+            pred = model(*inputs)
+
             loss = loss_fn(pred, y)
             loss.backward()
             grad_norms = _layer_grad_norms(model)
             optimizer.step()
-            train_loss_sum += loss.item() * X.size(0)
-            train_count += X.size(0)
+            train_loss_sum += loss.item() * y.size(0)
+            train_count += y.size(0)
             if on_batch_end:
                 on_batch_end(
                     epoch=epoch, 
@@ -51,16 +54,18 @@ def train(
         val_preds = []
         val_targets = []
         with torch.no_grad():
-            for X, y in training_dataloader:
-                X, y = X.to(device), y.to(device)
-                train_preds.append(model(X))
+            for batch in training_dataloader:
+                y = batch[-1].to(device)
+                inputs = [b.to(device) for b in batch[:-1]]
+                train_preds.append(model(*inputs))
                 train_targets.append(y)
-            for X, y in validation_dataloader:
-                X, y = X.to(device), y.to(device)
-                pred = model(X)
+            for batch in validation_dataloader:
+                y = batch[-1].to(device)
+                inputs = [b.to(device) for b in batch[:-1]]
+                pred = model(*inputs)
                 loss = loss_fn(pred, y)
-                val_loss_sum += loss.item() * X.size(0)
-                val_count += X.size(0)
+                val_loss_sum += loss.item() * y.size(0)
+                val_count += y.size(0)
                 val_preds.append(pred)
                 val_targets.append(y)
 

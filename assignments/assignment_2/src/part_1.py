@@ -2,17 +2,11 @@ from data_prep import get_smiles_dataloaders
 from models import MLP, Activation, Initialization
 from training import train
 import utils
+from utils import Output
 
 from dataclasses import dataclass, asdict
 
 import torch
-from torch import optim
-
-
-@dataclass
-class Output:
-    logs_dir: str
-    models_dir: str
 
 
 @dataclass
@@ -72,7 +66,7 @@ def run_1(config: RunConfig):
         dropout=dropout,
         batch_norm=hp.batch_norm,
     )
-    optimizer = _get_optimizer(hp.optimizer, model.parameters(), hp.lr, hp.momentum)
+    optimizer = utils.get_optimizer(hp.optimizer, model.parameters(), hp.lr, hp.momentum)
     logs['experiment']['model'] = model.describe()
 
     def on_batch_end(**kwargs):
@@ -99,15 +93,3 @@ def run_1(config: RunConfig):
 
     utils.save_logs(logs, config.output.logs_dir, f'{config.exp_id}__{utils.file_timestamp()}')
     utils.save_model(model, config.output.models_dir, f'{config.exp_id}__{utils.file_timestamp()}')
-
-
-def _get_optimizer(name: str, params, lr: float | None, momentum: float | None) -> optim.Optimizer:
-    lr = 0 if lr is None else lr
-    momentum = 0 if momentum is None else momentum
-
-    if name == 'sgd':
-        return optim.SGD(params, lr, momentum)
-    elif name == 'adam':
-        return optim.Adam(params, lr)
-    else:
-        raise Exception(f'optimizer not supported: "{name}"')

@@ -33,3 +33,11 @@ Adam will converge fastest, followed by SGD with momentum, then SGD. Training wi
 | 3 | Configuration 2 + BatchNorm |
 | 4 | Configuration 3 + Dropout ($p=0.3$) |
 
+## 2
+
+### 2.1
+
+$\square$ **Prediction 3**: Before training, write whether you think the LSTM will perform better than the MLP on validation, and briefly justify.
+
+Yes, I think the LSTM will perform better than the MLP. It taskes into account information about the position of tokens and the sequence of tokens.
+
